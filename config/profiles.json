@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-29T22:30:00",
+  "accounts": {
+    "karpathy": {
+      "name": "Andrej Karpathy",
+      "handle": "karpathy",
+      "category": "core",
+      "priority": 3,
+      "frequency": "medium",
+      "active_hours": [10, 11, 20, 21],
+      "content_type": "education",
+      "last_updated": "2026-04-29T22:15:00",
+      "update_pattern": "每周 2-3 条，晚上居多",
+      "interaction": "high",
+      "status": "active",
+      "tags": ["AI", "深度学习", "教育"]
+    },
+    "sama": {
+      "name": "Sam Altman",
+      "handle": "sama",
+      "category": "core",
+      "priority": 3,
+      "frequency": "medium",
+      "active_hours": [9, 10, 11, 20, 21],
+      "content_type": "opinion",
+      "last_updated": "2026-04-29T21:00:00",
+      "update_pattern": "每周 3-5 条，不定时",
+      "interaction": "high",
+      "status": "active",
+      "tags": ["AI", "创业", "OpenAI"]
+    }
+  }
+}
