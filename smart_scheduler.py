@@ -22,6 +22,7 @@ import subprocess
 import sys
 import os
 import sqlite3
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -47,7 +48,41 @@ class SmartScheduler:
         self.config = self._load_config()
         self.profiles = self._load_profiles()
         self.current_hour = datetime.now().hour
+        self._init_db()
         logger.debug(f"当前时间: {datetime.now()}, 当前小时: {self.current_hour}")
+    
+    def _init_db(self):
+        """初始化学习数据库表结构"""
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS active_hours_stats (
+                    hour INTEGER PRIMARY KEY,
+                    avg_active_count REAL DEFAULT 0,
+                    avg_fetch_count REAL DEFAULT 0,
+                    avg_interval_minutes REAL DEFAULT 0,
+                    total_fetches INTEGER DEFAULT 0,
+                    successful_fetches INTEGER DEFAULT 0,
+                    last_updated TEXT
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS fetch_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    handle TEXT,
+                    fetch_time TEXT,
+                    hour INTEGER,
+                    success INTEGER,
+                    tweet_count INTEGER DEFAULT 0,
+                    error_message TEXT
+                )
+            """)
+            conn.commit()
+            conn.close()
+            logger.debug("数据库表初始化完成")
+        except Exception as e:
+            logger.error(f"数据库初始化失败: {e}")
     
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
@@ -90,7 +125,8 @@ class SmartScheduler:
             logger.error(f"保存账号画像失败: {e}")
     
     def _log_fetch(self, accounts: List[str], fetch_type: str, 
-                   success_count: int, error_count: int, notes: str = ""):
+                   success_count: int, error_count: int, 
+                   total_duration: float = 0, notes: str = ""):
         """记录抓取日志"""
         try:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -113,7 +149,7 @@ class SmartScheduler:
                 "timestamp": datetime.now().isoformat(),
                 "accounts_fetched": accounts,
                 "fetch_type": fetch_type,
-                "duration_seconds": 0,  # TODO: 记录实际耗时
+                "duration_seconds": total_duration,
                 "success_count": success_count,
                 "error_count": error_count,
                 "notes": notes
@@ -128,7 +164,7 @@ class SmartScheduler:
             with open(log_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"抓取日志记录成功: {fetch_type}, 成功 {success_count}, 失败 {error_count}")
+            logger.info(f"抓取日志记录成功: {fetch_type}, 成功 {success_count}, 失败 {error_count}, 耗时 {total_duration}s")
             
         except Exception as e:
             logger.error(f"记录抓取日志失败: {e}")
@@ -223,10 +259,9 @@ class SmartScheduler:
                 
         except Exception as e:
             logger.error(f"获取自适应抓取间隔失败: {e}")
-            return 60  # 默认间隔
-    
-    def fetch_account(self, handle: str, with_replies: bool = False) -> bool:
-        """抓取单个账号"""
+    def fetch_account(self, handle: str, with_replies: bool = False) -> tuple[bool, float]:
+        """抓取单个账号，返回 (成功与否, 耗时秒数)"""
+        start_time = time.time()
         try:
             logger.info(f"开始抓取账号: {handle}")
             
@@ -245,23 +280,27 @@ class SmartScheduler:
                 timeout=60
             )
             
+            duration = round(time.time() - start_time, 2)
+            
             if result.returncode == 0:
-                logger.info(f"账号 {handle} 抓取成功")
+                logger.info(f"账号 {handle} 抓取成功 (耗时 {duration}s)")
                 
                 # 保存内容
                 self._save_content(handle, result.stdout)
                 
-                return True
+                return True, duration
             else:
-                logger.error(f"账号 {handle} 抓取失败: {result.stderr}")
-                return False
+                logger.error(f"账号 {handle} 抓取失败 (耗时 {duration}s): {result.stderr}")
+                return False, duration
                 
         except subprocess.TimeoutExpired:
-            logger.error(f"账号 {handle} 抓取超时")
-            return False
+            duration = round(time.time() - start_time, 2)
+            logger.error(f"账号 {handle} 抓取超时 (耗时 {duration}s)")
+            return False, duration
         except Exception as e:
-            logger.error(f"账号 {handle} 抓取异常: {e}")
-            return False
+            duration = round(time.time() - start_time, 2)
+            logger.error(f"账号 {handle} 抓取异常 (耗时 {duration}s): {e}")
+            return False, duration
     
     def _save_content(self, handle: str, content: str):
         """保存抓取内容"""
@@ -310,11 +349,15 @@ class SmartScheduler:
         # 执行抓取
         success_count = 0
         error_count = 0
+        total_duration = 0
         
         for i, account in enumerate(accounts):
             logger.info(f"抓取进度: {i+1}/{len(accounts)} - {account}")
             
-            if self.fetch_account(account, with_replies):
+            success, duration = self.fetch_account(account, with_replies)
+            total_duration += duration
+            
+            if success:
                 success_count += 1
             else:
                 error_count += 1
@@ -323,7 +366,6 @@ class SmartScheduler:
             if i < len(accounts) - 1:
                 delay = random.randint(interval // 2, interval * 2)
                 logger.debug(f"等待 {delay} 秒后继续")
-                import time
                 time.sleep(delay)
         
         # 记录日志
@@ -332,19 +374,23 @@ class SmartScheduler:
             "adaptive",
             success_count,
             error_count,
+            total_duration,
             f"自适应模式，抓取 {count} 个账号"
         )
         
-        logger.info(f"=== 自适应模式完成: 成功 {success_count}, 失败 {error_count} ===")
+        logger.info(f"=== 自适应模式完成: 成功 {success_count}, 失败 {error_count}, 耗时 {total_duration}s ===")
     
     def _select_accounts(self, count: int) -> List[str]:
         """选择要抓取的账号"""
         logger.debug(f"选择 {count} 个账号")
         
-        # 按优先级排序
+        # 优先级映射为数值
+        priority_map = {'high': 3, 'medium': 2, 'low': 1}
+        
+        # 按优先级排序（数值排序，不是字符串排序）
         sorted_accounts = sorted(
             self.profiles.items(),
-            key=lambda x: x[1].get('priority', 'medium'),
+            key=lambda x: priority_map.get(x[1].get('priority', 'medium'), 2),
             reverse=True
         )
         
@@ -371,11 +417,15 @@ class SmartScheduler:
         # 执行抓取
         success_count = 0
         error_count = 0
+        total_duration = 0
         
         for i, account in enumerate(accounts):
             logger.info(f"抓取进度: {i+1}/{len(accounts)} - {account}")
             
-            if self.fetch_account(account, with_replies):
+            success, duration = self.fetch_account(account, with_replies)
+            total_duration += duration
+            
+            if success:
                 success_count += 1
             else:
                 error_count += 1
@@ -385,7 +435,6 @@ class SmartScheduler:
                 interval = self.config.get('scheduler', {}).get('default_interval_minutes', 60)
                 delay = random.randint(interval // 2, interval * 2)
                 logger.debug(f"等待 {delay} 秒后继续")
-                import time
                 time.sleep(delay)
         
         # 记录日志
@@ -394,10 +443,11 @@ class SmartScheduler:
             "scheduled",
             success_count,
             error_count,
+            total_duration,
             f"定时模式，抓取 {count} 个账号"
         )
         
-        logger.info(f"=== 定时模式完成: 成功 {success_count}, 失败 {error_count} ===")
+        logger.info(f"=== 定时模式完成: 成功 {success_count}, 失败 {error_count}, 耗时 {total_duration}s ===")
     
     def show_profiles(self):
         """显示账号画像"""
@@ -468,22 +518,40 @@ def main():
     
     args = parser.parse_args()
     
+    # 记录启动日志
+    logger.info("=" * 50)
+    logger.info("Smart Scheduler 启动")
+    logger.info(f"参数: type={args.type}, adaptive={args.adaptive}, with_replies={args.with_replies}")
+    if args.accounts:
+        logger.info(f"指定账号: {args.accounts}")
+    logger.info("=" * 50)
+    
     # 初始化调度器
     scheduler = SmartScheduler()
     
     # 执行相应操作
-    if args.show_profiles:
-        scheduler.show_profiles()
-    elif args.update_profiles:
-        scheduler.update_profiles()
-    elif args.adaptive:
-        scheduler.run_adaptive(args.with_replies)
-    elif args.type == 'adaptive':
-        scheduler.run_adaptive(args.with_replies)
-    elif args.type == 'scheduled':
-        scheduler.run_scheduled(args.with_replies)
-    else:
-        scheduler.run_scheduled(args.with_replies)
+    try:
+        if args.show_profiles:
+            scheduler.show_profiles()
+        elif args.update_profiles:
+            scheduler.update_profiles()
+        elif args.adaptive:
+            scheduler.run_adaptive(args.with_replies)
+        elif args.type == 'adaptive':
+            scheduler.run_adaptive(args.with_replies)
+        elif args.type == 'scheduled':
+            scheduler.run_scheduled(args.with_replies)
+        else:
+            scheduler.run_scheduled(args.with_replies)
+        
+        logger.info("Smart Scheduler 正常退出")
+        
+    except KeyboardInterrupt:
+        logger.warning("用户中断执行")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Smart Scheduler 异常退出: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
