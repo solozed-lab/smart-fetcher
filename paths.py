@@ -73,7 +73,7 @@ def ensure_dirs(data_dir: Path) -> dict:
         "logs": data_dir / "logs",
         "logs_archive": data_dir / "logs" / "archive",
         "fetch_logs": data_dir / "fetch-logs",
-        "content": data_dir / "content",
+        "content": data_dir / "content",  # x-收藏内容
     }
     
     for dir_path in dirs.values():

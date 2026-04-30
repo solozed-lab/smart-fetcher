@@ -363,24 +363,119 @@ class SmartScheduler:
             return False, duration
     
     def _save_content(self, handle: str, content: str):
-        """保存抓取内容"""
+        """保存抓取内容（按日期整理）"""
         try:
+            import json
             today = datetime.now().strftime("%Y-%m-%d")
-            content_dir = self.paths['content_dir'] / "x-收藏" / handle
+            
+            # 按日期分目录：x-收藏/YYYY-MM-DD/handle.md
+            content_dir = self.paths['content_dir'] / "x-收藏" / today
             content_dir.mkdir(parents=True, exist_ok=True)
             
-            content_file = content_dir / f"{today}.md"
+            content_file = content_dir / f"{handle}.md"
             
             logger.debug(f"保存内容到: {content_file}")
             
+            # 解析 JSON 内容
+            try:
+                tweets = json.loads(content)
+            except:
+                tweets = []
+            
+            # 写入格式化内容
             with open(content_file, 'w', encoding='utf-8') as f:
                 f.write(f"# {handle} - {today}\n\n")
-                f.write(content)
+                f.write(f"共 {len(tweets)} 条推文\n\n")
+                
+                for tweet in tweets:
+                    f.write(f"## {tweet.get('id', 'unknown')}\n\n")
+                    f.write(f"{tweet.get('text', '')}\n\n")
+                    f.write(f"- 👍 {tweet.get('likes', 0)} | 🔁 {tweet.get('retweets', 0)} | 💬 {tweet.get('replies', 0)} | 👁️ {tweet.get('views', 0)}\n")
+                    f.write(f"- 🔗 {tweet.get('url', '')}\n\n")
+                    f.write("---\n\n")
             
             logger.info(f"内容保存成功: {content_file}")
             
+            # 更新每日汇总
+            self._update_daily_summary(today, handle, len(tweets))
+            
+            # 更新总目录
+            self._update_index()
+            
         except Exception as e:
             logger.error(f"保存内容失败: {e}")
+    
+    def _update_daily_summary(self, date: str, handle: str, tweet_count: int):
+        """更新每日汇总"""
+        try:
+            summary_dir = self.paths['content_dir'] / "x-收藏" / date
+            summary_file = summary_dir / "summary.md"
+            
+            # 读取现有汇总
+            summaries = {}
+            if summary_file.exists():
+                with open(summary_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.startswith("- **"):
+                            parts = line.strip().split("**: ")
+                            if len(parts) == 2:
+                                account = parts[0].replace("- **", "")
+                                count = parts[1].replace(" 条推文", "")
+                                summaries[account] = int(count)
+            
+            # 更新汇总
+            summaries[handle] = tweet_count
+            
+            # 写入汇总
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write(f"# 每日汇总 - {date}\n\n")
+                f.write(f"共抓取 {len(summaries)} 个账号\n\n")
+                
+                for account, count in sorted(summaries.items()):
+                    f.write(f"- **{account}**: {count} 条推文\n")
+            
+            logger.debug(f"每日汇总更新: {summary_file}")
+            
+        except Exception as e:
+            logger.error(f"更新每日汇总失败: {e}")
+    
+    def _update_index(self):
+        """更新总目录"""
+        try:
+            index_file = self.paths['content_dir'] / "x-收藏" / "index.md"
+            
+            # 获取所有日期目录
+            x_dir = self.paths['content_dir'] / "x-收藏"
+            dates = sorted([d.name for d in x_dir.iterdir() 
+                          if d.is_dir() and d.name != "index.md" and not d.name.startswith(".")])
+            
+            # 写入总目录
+            with open(index_file, 'w', encoding='utf-8') as f:
+                f.write("# X 收藏总目录\n\n")
+                f.write(f"共 {len(dates)} 天的抓取记录\n\n")
+                
+                for date in dates:
+                    date_dir = x_dir / date
+                    summary_file = date_dir / "summary.md"
+                    
+                    if summary_file.exists():
+                        with open(summary_file, 'r', encoding='utf-8') as sf:
+                            lines = sf.readlines()
+                            # 提取账号数量
+                            account_count = 0
+                            for line in lines:
+                                if line.startswith("- **"):
+                                    account_count += 1
+                            
+                            f.write(f"## [{date}]({date}/)\n\n")
+                            f.write(f"共 {account_count} 个账号\n\n")
+                    else:
+                        f.write(f"## [{date}]({date}/)\n\n")
+            
+            logger.debug(f"总目录更新: {index_file}")
+            
+        except Exception as e:
+            logger.error(f"更新总目录失败: {e}")
     
     def run_adaptive(self):
         """运行自适应模式"""
