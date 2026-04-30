@@ -427,7 +427,7 @@ class SmartScheduler:
             
             # 随机间隔（interval 单位是分钟，转换为秒）
             if i < len(accounts) - 1:
-                delay_seconds = random.randint(interval * 30, interval * 120)  # 0.5x 到 2x 分钟，转换为秒
+                delay_seconds = random.randint(interval // 2, interval * 2)  # 0.5x 到 2x 分钟，转换为秒
                 logger.debug(f"等待 {delay_seconds} 秒后继续")
                 time.sleep(delay_seconds)
         
@@ -496,7 +496,7 @@ class SmartScheduler:
             # 随机间隔（interval 单位是分钟，转换为秒）
             if i < len(accounts) - 1:
                 interval = self.config.get('scheduler', {}).get('default_interval_minutes', 60)
-                delay_seconds = random.randint(interval * 30, interval * 120)  # 0.5x 到 2x 分钟，转换为秒
+                delay_seconds = random.randint(interval // 2, interval * 2)  # 0.5x 到 2x 分钟，转换为秒
                 logger.debug(f"等待 {delay_seconds} 秒后继续")
                 time.sleep(delay_seconds)
         

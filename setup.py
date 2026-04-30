@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="smart-scheduler",
-    version="1.0.0",
+    version="0.2.0",
     author="Your Name",
     author_email="your.email@example.com",
     description="智能抓取调度系统 - 根据账号习惯动态调整抓取时间",
