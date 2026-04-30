@@ -149,3 +149,5 @@ logs/
 output/
 temp/
 tmp/
+settings.yaml
+data/

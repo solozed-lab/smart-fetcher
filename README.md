@@ -340,45 +340,49 @@ output:
 
 ## 📁 路径配置
 
-### 默认数据目录
+### 优先级（从高到低）
 
-数据默认存储在项目根目录下的 `data/` 目录：
+1. `--data-dir` 命令行参数
+2. `SMART_SCHEDULER_DATA_DIR` 环境变量
+3. `settings.yaml` 配置文件
+4. 项目根目录下的 `data/`（默认）
 
-```
-smart-scheduler/
-├── data/                  # 默认数据目录
-│   ├── config.yaml        # 配置文件
-│   ├── accounts.json      # 账号画像
-│   ├── learning.db        # 学习数据库
-│   ├── logs/              # 日志目录
-│   ├── fetch-logs/        # 抓取日志
-│   └── content/           # 抓取内容
-├── smart_scheduler.py
-├── paths.py
-└── logger.py
+### settings.yaml 配置文件（推荐）
+
+在项目根目录创建 `settings.yaml`：
+
+```yaml
+# 数据目录（绝对路径或相对路径）
+data_dir: ~/AI/hermes/input/learn
 ```
 
-### 自定义数据目录
+### 目录结构
 
-两种方式：
+```
+data_dir/
+├── config.yaml        # 主配置文件
+├── accounts.json      # 账号画像
+├── learning.db        # 学习数据库
+├── logs/              # 日志目录
+├── fetch-logs/        # 抓取日志
+└── content/           # 抓取内容
+```
 
-#### 1. 命令行参数
+### 命令行参数
 
 ```bash
+# 指定数据目录
 python3 smart_scheduler.py --data-dir /path/to/data
+
+# 查看当前路径配置
+python3 smart_scheduler.py --show-paths
 ```
 
-#### 2. 环境变量
+### 环境变量
 
 ```bash
 export SMART_SCHEDULER_DATA_DIR=/path/to/data
 python3 smart_scheduler.py
-```
-
-### 查看当前路径配置
-
-```bash
-python3 smart_scheduler.py --show-paths
 ```
 
 ---
