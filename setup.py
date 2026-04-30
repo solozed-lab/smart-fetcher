@@ -10,14 +10,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="smart-scheduler",
+    name="smart-fetcher",
     version="0.2.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="solozed-lab",
+    author_email="i@solozed.com",
     description="智能抓取调度系统 - 根据账号习惯动态调整抓取时间",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-username/smart-scheduler",
+    url="https://github.com/solozed-lab/smart-fetcher",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -50,7 +50,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "smart-scheduler=smart_scheduler.cli:main",
+            "smart-fetcher=smart_scheduler.cli:main",
         ],
     },
     include_package_data=True,
@@ -72,8 +72,8 @@ setup(
         "adaptive",
     ],
     project_urls={
-        "Bug Reports": "https://github.com/your-username/smart-scheduler/issues",
-        "Source": "https://github.com/your-username/smart-scheduler",
-        "Documentation": "https://github.com/your-username/smart-scheduler#readme",
+        "Bug Reports": "https://github.com/solozed-lab/smart-fetcher/issues",
+        "Source": "https://github.com/solozed-lab/smart-fetcher",
+        "Documentation": "https://github.com/solozed-lab/smart-fetcher#readme",
     },
 )

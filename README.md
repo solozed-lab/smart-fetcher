@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/your-username/smart-scheduler.svg)](https://github.com/your-username/smart-scheduler)
+[![Stars](https://img.shields.io/github/stars/solozed-lab/smart-fetcher.svg)](https://github.com/solozed-lab/smart-fetcher)
 
 ---
 
@@ -24,8 +24,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/smart-scheduler.git
-cd smart-scheduler
+git clone https://github.com/solozed-lab/smart-fetcher.git
+cd smart-fetcher
 
 # 安装依赖
 ./install-dependencies.sh
@@ -68,7 +68,7 @@ python3 smart_scheduler.py --type manual --accounts karpathy,sama --with-replies
 ## 📁 项目结构
 
 ```
-smart-scheduler/
+smart-fetcher/
 ├── README.md                          # 项目说明
 ├── LICENSE                            # MIT 许可证
 ├── .gitignore                         # Git 忽略文件
@@ -573,7 +573,7 @@ selected = sampler.select_account(accounts)
 **目标**：支持更多社交媒体平台
 
 ```
-smart-scheduler/
+smart-fetcher/
 ├── platforms/                  # 平台适配层
 │   ├── __init__.py
 │   ├── base.py                 # 平台适配器基类
@@ -754,7 +754,7 @@ twine upload dist/*
 
 - 作者：Your Name
 - 邮箱：your.email@example.com
-- GitHub：[@your-username](https://github.com/your-username)
+- GitHub：[@solozed-lab](https://github.com/solozed-lab)
 
 ---
 
@@ -762,7 +762,7 @@ twine upload dist/*
 
 - [AutoCLI](https://github.com/nashsu/AutoCLI) - 自动化 CLI 工具
 - [LLM Wiki](https://github.com/karpathy/llm-wiki) - LLM 知识管理
-- [Smart Scheduler](https://github.com/your-username/smart-scheduler) - 本项目
+- [Smart Scheduler](https://github.com/solozed-lab/smart-fetcher) - 本项目
 
 ---
 
