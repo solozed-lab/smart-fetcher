@@ -338,6 +338,67 @@ output:
 
 ---
 
+## 📝 日志系统
+
+### 日志目录结构
+
+```
+logs/
+├── scheduler.log          # 主日志（DEBUG 级别）
+├── error.log              # 错误日志（ERROR 级别）
+├── fetch.log              # 抓取日志（INFO 级别）
+└── archive/               # 归档目录
+    └── *.log.gz           # 压缩的旧日志
+```
+
+### 日志清理规范
+
+| 时间范围 | 操作 | 说明 |
+|---------|------|------|
+| 0-3 天 | 保留原始日志 | 实时查看和调试 |
+| 3-7 天 | 压缩为 `.gz` | 节省存储空间 |
+| 7-30 天 | 移到 `archive/` | 归档保存 |
+| 30 天以上 | 自动删除 | 清理过期日志 |
+
+### 日志级别
+
+- **DEBUG**：详细的调试信息
+- **INFO**：一般信息（抓取成功、状态变更）
+- **WARNING**：警告信息（非致命错误）
+- **ERROR**：错误信息（抓取失败、配置错误）
+
+### 使用方法
+
+```python
+from logger import logger, log_manager
+
+# 记录日志
+logger.info("这是一条信息")
+logger.error("这是一条错误")
+
+# 清理日志
+stats = log_manager.cleanup_logs()
+print(stats)
+
+# 获取统计
+stats = log_manager.get_log_stats()
+print(stats)
+```
+
+### 定时清理
+
+系统会自动在每天凌晨 2 点执行日志清理：
+
+```bash
+# 手动清理
+python3 cleanup-logs.py
+
+# 查看清理效果
+python3 cleanup-logs.py --dry-run
+```
+
+---
+
 ## 🔧 配置说明
 
 ### 环境变量

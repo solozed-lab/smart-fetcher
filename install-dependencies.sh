@@ -45,6 +45,10 @@ pip3 install scikit-learn
 echo "安装可视化依赖（可选）..."
 pip3 install matplotlib seaborn
 
+# 安装日志依赖
+echo "安装日志依赖..."
+pip3 install loguru
+
 # 安装其他依赖
 echo "安装其他依赖..."
 pip3 install requests tqdm
