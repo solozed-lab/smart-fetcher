@@ -338,6 +338,51 @@ output:
 
 ---
 
+## 📁 路径配置
+
+### 默认数据目录
+
+数据默认存储在项目根目录下的 `data/` 目录：
+
+```
+smart-scheduler/
+├── data/                  # 默认数据目录
+│   ├── config.yaml        # 配置文件
+│   ├── accounts.json      # 账号画像
+│   ├── learning.db        # 学习数据库
+│   ├── logs/              # 日志目录
+│   ├── fetch-logs/        # 抓取日志
+│   └── content/           # 抓取内容
+├── smart_scheduler.py
+├── paths.py
+└── logger.py
+```
+
+### 自定义数据目录
+
+两种方式：
+
+#### 1. 命令行参数
+
+```bash
+python3 smart_scheduler.py --data-dir /path/to/data
+```
+
+#### 2. 环境变量
+
+```bash
+export SMART_SCHEDULER_DATA_DIR=/path/to/data
+python3 smart_scheduler.py
+```
+
+### 查看当前路径配置
+
+```bash
+python3 smart_scheduler.py --show-paths
+```
+
+---
+
 ## 📝 日志系统
 
 ### 日志目录结构

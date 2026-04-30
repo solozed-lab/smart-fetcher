@@ -28,8 +28,15 @@ from loguru import logger
 class LogManager:
     """日志管理器"""
     
-    def __init__(self, log_dir: str = "logs"):
-        self.log_dir = Path(log_dir)
+    def __init__(self, log_dir: str = None):
+        # 如果没有指定日志目录，使用默认路径
+        if log_dir is None:
+            from paths import get_paths
+            paths = get_paths()
+            self.log_dir = paths['log_dir']
+        else:
+            self.log_dir = Path(log_dir)
+        
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
         # 子目录

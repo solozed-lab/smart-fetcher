@@ -9,7 +9,7 @@
 - 30天以上：删除
 
 使用方法：
-    python cleanup-logs-cron.py
+    python cleanup-logs-cron.py [--data-dir /path]
 """
 
 import sys
@@ -18,6 +18,7 @@ from pathlib import Path
 # 添加项目根目录到 path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from paths import get_paths
 from logger import log_manager, get_logger
 
 logger = get_logger("cleanup-cron")
@@ -25,6 +26,19 @@ logger = get_logger("cleanup-cron")
 
 def main():
     """主函数"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='日志清理定时任务')
+    parser.add_argument('--data-dir', help='自定义数据目录')
+    
+    args = parser.parse_args()
+    
+    # 如果指定了数据目录，重新初始化日志管理器
+    if args.data_dir:
+        from logger import LogManager
+        paths = get_paths(args.data_dir)
+        log_manager = LogManager(str(paths['log_dir']))
+    
     logger.info("=== 开始日志清理定时任务 ===")
     
     try:

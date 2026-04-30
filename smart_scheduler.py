@@ -9,10 +9,9 @@ Smart Scheduler — 智能抓取调度系统
     python3 smart_scheduler.py --accounts karpathy,AndrewYNg  # 指定账号
     python3 smart_scheduler.py --show-profiles    # 查看账号画像
     python3 smart_scheduler.py --update-profiles  # 更新账号画像
-    python3 smart_scheduler.py --analyze          # 分析账号内容
-    python3 smart_scheduler.py --compare karpathy,AndrewYNg  # 对比博主
-    python3 smart_scheduler.py --with-replies     # 包含评论区内容
     python3 smart_scheduler.py --adaptive         # 自适应模式（根据学习结果决策）
+    python3 smart_scheduler.py --data-dir /path   # 自定义数据目录
+    python3 smart_scheduler.py --show-paths       # 显示路径配置
 """
 
 import json
@@ -27,24 +26,23 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+# 导入路径配置
+from paths import get_paths, print_paths
+
 # 导入日志系统
 from logger import logger, log_manager
-
-# 路径配置
-BASE_DIR = Path(__file__).parent.parent.parent
-INPUT_DIR = BASE_DIR / "input"
-LEARN_DIR = INPUT_DIR / "learn"
-CONFIG_PATH = LEARN_DIR / "config.yaml"
-PROFILES_PATH = LEARN_DIR / "account-profiles.json"
-DB_PATH = LEARN_DIR / "learning.db"
-LOG_DIR = LEARN_DIR / "fetch-logs"
 
 
 class SmartScheduler:
     """智能抓取调度器"""
     
-    def __init__(self):
+    def __init__(self, data_dir: str = None):
+        # 获取路径配置
+        self.paths = get_paths(data_dir)
+        
         logger.info("初始化 SmartScheduler")
+        logger.info(f"数据目录: {self.paths['data_dir']}")
+        
         self.config = self._load_config()
         self.profiles = self._load_profiles()
         self.current_hour = datetime.now().hour
@@ -54,7 +52,7 @@ class SmartScheduler:
     def _init_db(self):
         """初始化学习数据库表结构"""
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(self.paths['db_file'])
             cursor = conn.cursor()
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS active_hours_stats (
@@ -87,8 +85,14 @@ class SmartScheduler:
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
         try:
-            logger.debug(f"加载配置文件: {CONFIG_PATH}")
-            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config_file = self.paths['config_file']
+            logger.debug(f"加载配置文件: {config_file}")
+            
+            if not config_file.exists():
+                logger.warning(f"配置文件不存在: {config_file}")
+                return {}
+            
+            with open(config_file, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 logger.info(f"配置加载成功，包含 {len(config)} 个配置项")
                 return config
@@ -99,8 +103,14 @@ class SmartScheduler:
     def _load_profiles(self) -> Dict[str, Any]:
         """加载账号画像"""
         try:
-            logger.debug(f"加载账号画像: {PROFILES_PATH}")
-            with open(PROFILES_PATH, 'r', encoding='utf-8') as f:
+            profiles_file = self.paths['profiles_file']
+            logger.debug(f"加载账号画像: {profiles_file}")
+            
+            if not profiles_file.exists():
+                logger.warning(f"账号画像文件不存在: {profiles_file}")
+                return {}
+            
+            with open(profiles_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 accounts = data.get('accounts', {})
                 logger.info(f"账号画像加载成功，共 {len(accounts)} 个账号")
@@ -112,13 +122,15 @@ class SmartScheduler:
     def _save_profiles(self):
         """保存账号画像"""
         try:
-            logger.debug(f"保存账号画像: {PROFILES_PATH}")
+            profiles_file = self.paths['profiles_file']
+            logger.debug(f"保存账号画像: {profiles_file}")
+            
             data = {
                 "version": "1.0",
                 "last_updated": datetime.now().isoformat(),
                 "accounts": self.profiles
             }
-            with open(PROFILES_PATH, 'w', encoding='utf-8') as f:
+            with open(profiles_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             logger.info(f"账号画像保存成功，共 {len(self.profiles)} 个账号")
         except Exception as e:
@@ -130,7 +142,7 @@ class SmartScheduler:
         """记录抓取日志"""
         try:
             today = datetime.now().strftime("%Y-%m-%d")
-            log_file = LOG_DIR / f"{today}.json"
+            log_file = self.paths['fetch_log_dir'] / f"{today}.json"
             
             logger.debug(f"记录抓取日志: {log_file}")
             
@@ -172,7 +184,7 @@ class SmartScheduler:
     def _record_fetch_to_db(self, handle: str, success: bool):
         """记录抓取结果到学习数据库"""
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(self.paths['db_file'])
             cursor = conn.cursor()
             
             now = datetime.now()
@@ -207,7 +219,7 @@ class SmartScheduler:
         try:
             logger.debug("检查是否应该现在执行")
             
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(self.paths['db_file'])
             cursor = conn.cursor()
             
             # 查询当前时段有数据的账号数量（按账号去重）
@@ -250,7 +262,7 @@ class SmartScheduler:
         try:
             logger.debug("获取自适应抓取数量")
             
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(self.paths['db_file'])
             cursor = conn.cursor()
             
             # 查询当前时段有数据的账号总数作为抓取数量参考
@@ -281,7 +293,7 @@ class SmartScheduler:
         try:
             logger.debug("获取自适应抓取间隔")
             
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(self.paths['db_file'])
             cursor = conn.cursor()
             
             # 查询当前时段的平均抓取概率作为间隔参考（概率越高，间隔越短）
@@ -308,6 +320,7 @@ class SmartScheduler:
         except Exception as e:
             logger.error(f"获取自适应抓取间隔失败: {e}")
             return 60  # 默认间隔
+    
     def fetch_account(self, handle: str) -> tuple[bool, float]:
         """抓取单个账号，返回 (成功与否, 耗时秒数)"""
         start_time = time.time()
@@ -353,7 +366,7 @@ class SmartScheduler:
         """保存抓取内容"""
         try:
             today = datetime.now().strftime("%Y-%m-%d")
-            content_dir = INPUT_DIR / "x-收藏" / handle
+            content_dir = self.paths['content_dir'] / "x-收藏" / handle
             content_dir.mkdir(parents=True, exist_ok=True)
             
             content_file = content_dir / f"{today}.md"
@@ -563,8 +576,15 @@ def main():
     parser.add_argument('--update-profiles', action='store_true', help='更新账号画像')
     parser.add_argument('--with-replies', action='store_true', help='包含评论区内容（暂不支持）')
     parser.add_argument('--adaptive', action='store_true', help='自适应模式')
+    parser.add_argument('--data-dir', help='自定义数据目录')
+    parser.add_argument('--show-paths', action='store_true', help='显示路径配置')
     
     args = parser.parse_args()
+    
+    # 显示路径配置
+    if args.show_paths:
+        print_paths(args.data_dir)
+        return
     
     # 记录启动日志
     logger.info("=" * 50)
@@ -572,10 +592,12 @@ def main():
     logger.info(f"参数: type={args.type}, adaptive={args.adaptive}")
     if args.accounts:
         logger.info(f"指定账号: {args.accounts}")
+    if args.data_dir:
+        logger.info(f"自定义数据目录: {args.data_dir}")
     logger.info("=" * 50)
     
     # 初始化调度器
-    scheduler = SmartScheduler()
+    scheduler = SmartScheduler(data_dir=args.data_dir)
     
     # 执行相应操作
     try:
