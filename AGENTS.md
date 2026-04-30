@@ -1,4 +1,4 @@
-# AGENTS.md — smart-scheduler/
+# AGENTS.md — smart-fetcher/
 
 智能抓取调度系统 — 根据账号习惯动态调整抓取时间。
 
@@ -9,7 +9,7 @@
 ## 文件结构
 
 ```
-smart-scheduler/
+smart-fetcher/
 ├── README.md              # 使用说明（英文）
 ├── README_zh.md           # 使用说明（中文）
 ├── AGENTS.md              # 本文件
@@ -69,16 +69,16 @@ python3 smart_scheduler.py --show-paths
 
 ```bash
 # 每小时自适应抓取
-0 * * * * cd /Users/yun-z/AI/hermes/programs/smart-scheduler && python3 smart_scheduler.py --adaptive
+0 * * * * cd /Users/yun-z/AI/hermes/programs/smart-fetcher && python3 smart_scheduler.py --adaptive
 
 # 每天 22:00 生成日报
-0 22 * * * cd /Users/yun-z/AI/hermes/programs/smart-scheduler && python3 daily_summary.py
+0 22 * * * cd /Users/yun-z/AI/hermes/programs/smart-fetcher && python3 daily_summary.py
 
 # 每周日 22:00 交叉验证
-0 22 * * 0 cd /Users/yun-z/AI/hermes/programs/smart-scheduler && python3 cross_validation.py
+0 22 * * 0 cd /Users/yun-z/AI/hermes/programs/smart-fetcher && python3 cross_validation.py
 
 # 每天 02:00 清理日志
-0 2 * * * cd /Users/yun-z/AI/hermes/programs/smart-scheduler && python3 cleanup-logs.py
+0 2 * * * cd /Users/yun-z/AI/hermes/programs/smart-fetcher && python3 cleanup-logs.py
 ```
 
 ## 调度逻辑
@@ -189,7 +189,7 @@ python3 cleanup-logs.py
 | 2026-04-29 22:30 | 创建目录结构 | 完成 |
 | 2026-04-29 22:31 | 创建 README.md | 完成 |
 | 2026-04-29 22:32 | 创建 AGENTS.md | 完成 |
-| 2026-04-29 22:33 | 待创建：smart-scheduler.py | 进行中 |
+| 2026-04-29 22:33 | 待创建：smart-fetcher.py | 进行中 |
 | 2026-04-29 22:34 | 待创建：scheduler-core.py | 待定 |
 | 2026-04-29 22:35 | 待创建：requirements.txt | 待定 |
 | 2026-04-30 10:15 | 修复 `--with-replies` bug：autocli 不支持此参数，改用 `--format json --limit 20` | 完成 |

@@ -110,7 +110,7 @@ def main():
     print("=========================================")
     print()
     print("现在可以运行 Smart Scheduler 了：")
-    print("  python3 programs/smart-scheduler/smart-scheduler.py --help")
+    print("  python3 programs/smart-fetcher/smart-fetcher.py --help")
     print()
 
 if __name__ == "__main__":

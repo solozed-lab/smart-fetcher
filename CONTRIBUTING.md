@@ -74,8 +74,8 @@ Closes #123
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/smart-scheduler.git
-cd smart-scheduler
+git clone https://github.com/your-username/smart-fetcher.git
+cd smart-fetcher
 ```
 
 ### 2. 安装依赖
@@ -99,7 +99,7 @@ python -m pytest tests/
 ## 项目结构
 
 ```
-smart-scheduler/
+smart-fetcher/
 ├── README.md                          # 项目说明
 ├── LICENSE                            # MIT 许可证
 ├── .gitignore                         # Git 忽略文件

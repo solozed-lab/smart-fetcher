@@ -1,5 +1,5 @@
 """
-smart-scheduler 日志系统
+smart-fetcher 日志系统
 
 基于 loguru 实现专业的日志管理：
 - 按天分割日志
