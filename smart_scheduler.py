@@ -368,8 +368,8 @@ class SmartScheduler:
             import json
             today = datetime.now().strftime("%Y-%m-%d")
             
-            # 按日期分目录：x-收藏/YYYY-MM-DD/handle.md
-            content_dir = self.paths['content_dir'] / "x-收藏" / today
+            # 按日期分目录：x/YYYY-MM-DD/handle.md
+            content_dir = self.paths['content_dir'] / "x" / today
             content_dir.mkdir(parents=True, exist_ok=True)
             
             content_file = content_dir / f"{handle}.md"
@@ -408,7 +408,7 @@ class SmartScheduler:
     def _update_daily_summary(self, date: str, handle: str, tweet_count: int):
         """更新每日汇总"""
         try:
-            summary_dir = self.paths['content_dir'] / "x-收藏" / date
+            summary_dir = self.paths['content_dir'] / "x" / date
             summary_file = summary_dir / "summary.md"
             
             # 读取现有汇总
@@ -442,10 +442,10 @@ class SmartScheduler:
     def _update_index(self):
         """更新总目录"""
         try:
-            index_file = self.paths['content_dir'] / "x-收藏" / "index.md"
+            index_file = self.paths['content_dir'] / "x" / "index.md"
             
             # 获取所有日期目录
-            x_dir = self.paths['content_dir'] / "x-收藏"
+            x_dir = self.paths['content_dir'] / "x"
             dates = sorted([d.name for d in x_dir.iterdir() 
                           if d.is_dir() and d.name != "index.md" and not d.name.startswith(".")])
             
