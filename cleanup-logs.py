@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from paths import get_paths
-from logger import log_manager, get_logger
+from logger import get_log_manager, get_logger
 
 logger = get_logger("cleanup")
 
@@ -33,6 +33,9 @@ def main():
     parser.add_argument('--data-dir', help='自定义数据目录')
     
     args = parser.parse_args()
+    
+    # 获取日志管理器
+    log_manager = get_log_manager()
     
     # 如果指定了数据目录，重新初始化日志管理器
     if args.data_dir:

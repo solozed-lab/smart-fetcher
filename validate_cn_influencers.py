@@ -25,8 +25,10 @@ def fetch_account_tweets(account: str, limit: int = 10) -> List[Dict[str, Any]]:
         cmd = f'autocli twitter search "from:{account}" --limit {limit} --format json'
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
         
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
+        # autocli sometimes returns non-zero exit code with valid JSON in stdout
+        output = result.stdout.strip()
+        if output:
+            data = json.loads(output)
             if data:
                 return data
     except Exception as e:

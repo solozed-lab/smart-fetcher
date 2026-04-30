@@ -258,13 +258,23 @@ class LogManager:
         return stats
 
 
-# 全局日志管理器实例
-log_manager = LogManager()
+# 全局日志管理器实例（延迟初始化）
+log_manager = None
+
+
+def get_log_manager():
+    """获取全局日志管理器（延迟初始化）"""
+    global log_manager
+    if log_manager is None:
+        log_manager = LogManager()
+    return log_manager
 
 
 # 便捷的日志函数
 def get_logger(name: str = None):
     """获取 logger 实例"""
+    # 确保日志管理器已初始化
+    get_log_manager()
     if name:
         return logger.bind(name=name)
     return logger

@@ -131,6 +131,7 @@ python3 smart-scheduler.py --update-profiles
 | 2026-04-30 10:15 | 添加 Bootstrap 模式：DB 数据 < 20 行时始终执行，积累学习数据 | 完成 |
 | 2026-04-30 10:15 | 添加 `_record_fetch_to_db` 方法：每次抓取后记录到 learning.db | 完成 |
 | 2026-04-30 10:17 | 验证修复：karpathy 抓取成功（7.13s），DB 学习记录正常 | 完成 |
+| 2026-04-30 13:23 | 修复 validate_cn_influencers.py：autocli 偶尔返回非零 exit code 但 stdout 有有效 JSON，改为不检查 returncode | 完成 |
 
 ## 已知限制
 
