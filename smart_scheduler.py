@@ -169,25 +169,71 @@ class SmartScheduler:
         except Exception as e:
             logger.error(f"记录抓取日志失败: {e}")
     
+    def _record_fetch_to_db(self, handle: str, success: bool):
+        """记录抓取结果到学习数据库"""
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            
+            now = datetime.now()
+            hour = now.hour
+            
+            # 记录到 fetch_history（字段与表结构匹配）
+            cursor.execute("""
+                INSERT INTO fetch_history (account, fetch_time, has_new_content, tweets_count)
+                VALUES (?, ?, ?, ?)
+            """, (handle, now.isoformat(), 1 if success else 0, 20 if success else 0))
+            
+            # 更新 active_hours_stats（UPSERT，字段与表结构匹配）
+            cursor.execute("""
+                INSERT INTO active_hours_stats (account, hour, fetch_count, new_content_count, probability, updated_at)
+                VALUES (?, ?, 1, ?, ?, ?)
+                ON CONFLICT(account, hour) DO UPDATE SET
+                    fetch_count = fetch_count + 1,
+                    new_content_count = new_content_count + ?,
+                    probability = CAST(new_content_count + ? AS FLOAT) / (fetch_count + 1),
+                    updated_at = ?
+            """, (handle, hour, 1 if success else 0, 1.0 if success else 0.0, now.isoformat(),
+                  1 if success else 0, 1 if success else 0, now.isoformat()))
+            
+            conn.commit()
+            conn.close()
+            logger.debug(f"学习数据记录: {handle} hour={hour} success={success}")
+        except Exception as e:
+            logger.error(f"记录学习数据失败: {e}")
+    
     def should_execute_now(self) -> bool:
         """根据学习结果决定是否现在执行"""
         try:
             logger.debug("检查是否应该现在执行")
             
-            # 查询当前时段的活跃账号数量
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             
+            # 查询当前时段有数据的账号数量（按账号去重）
             cursor.execute("""
-                SELECT COUNT(*) FROM active_hours_stats 
-                WHERE hour = ? AND avg_active_count > 0
+                SELECT COUNT(DISTINCT account) FROM active_hours_stats 
+                WHERE hour = ? AND fetch_count > 0
             """, (self.current_hour,))
             
             result = cursor.fetchone()
             active_count = result[0] if result else 0
-            conn.close()
             
             logger.debug(f"当前时段 ({self.current_hour}:00) 活跃账号数: {active_count}")
+            
+            # 检查总数据量，数据不足时进入 bootstrap 模式（始终执行）
+            try:
+                cursor.execute("SELECT COUNT(*) FROM active_hours_stats")
+                total_rows = cursor.fetchone()[0]
+            except sqlite3.Error as e:
+                logger.warning(f"查询数据量失败: {e}")
+                total_rows = 0
+            
+            conn.close()
+            
+            if total_rows < 20:
+                logger.info(f"Bootstrap 模式（数据量 {total_rows} < 20），始终执行")
+                return True
             
             # 如果有 3 个以上账号在这个时段活跃，执行抓取
             should_execute = active_count >= 3
@@ -207,10 +253,10 @@ class SmartScheduler:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             
-            # 查询当前时段的平均抓取数量
+            # 查询当前时段有数据的账号总数作为抓取数量参考
             cursor.execute("""
-                SELECT avg_fetch_count FROM active_hours_stats 
-                WHERE hour = ?
+                SELECT COUNT(DISTINCT account) FROM active_hours_stats 
+                WHERE hour = ? AND fetch_count > 0
             """, (self.current_hour,))
             
             result = cursor.fetchone()
@@ -238,18 +284,20 @@ class SmartScheduler:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             
-            # 查询当前时段的平均间隔
+            # 查询当前时段的平均抓取概率作为间隔参考（概率越高，间隔越短）
             cursor.execute("""
-                SELECT avg_interval_minutes FROM active_hours_stats 
-                WHERE hour = ?
+                SELECT AVG(probability) FROM active_hours_stats 
+                WHERE hour = ? AND fetch_count > 0
             """, (self.current_hour,))
             
             result = cursor.fetchone()
             conn.close()
             
-            if result and result[0] > 0:
-                interval = int(result[0])
-                logger.debug(f"根据历史数据，抓取间隔: {interval} 分钟")
+            if result and result[0] and result[0] > 0:
+                # 概率高 → 间隔短，概率低 → 间隔长
+                probability = result[0]
+                interval = max(15, int(60 * (1 - probability)))
+                logger.debug(f"根据历史概率 {probability:.2f}，抓取间隔: {interval} 分钟")
                 return interval
             else:
                 # 默认间隔
@@ -259,16 +307,15 @@ class SmartScheduler:
                 
         except Exception as e:
             logger.error(f"获取自适应抓取间隔失败: {e}")
-    def fetch_account(self, handle: str, with_replies: bool = False) -> tuple[bool, float]:
+            return 60  # 默认间隔
+    def fetch_account(self, handle: str) -> tuple[bool, float]:
         """抓取单个账号，返回 (成功与否, 耗时秒数)"""
         start_time = time.time()
         try:
             logger.info(f"开始抓取账号: {handle}")
             
             # 构建命令
-            cmd = ["autocli", "twitter", "search", f"from:{handle}"]
-            if with_replies:
-                cmd.append("--with-replies")
+            cmd = ["autocli", "twitter", "search", f"from:{handle}", "--format", "json", "--limit", "20"]
             
             logger.debug(f"执行命令: {' '.join(cmd)}")
             
@@ -322,7 +369,7 @@ class SmartScheduler:
         except Exception as e:
             logger.error(f"保存内容失败: {e}")
     
-    def run_adaptive(self, with_replies: bool = False):
+    def run_adaptive(self):
         """运行自适应模式"""
         logger.info("=== 开始自适应模式抓取 ===")
         
@@ -354,19 +401,22 @@ class SmartScheduler:
         for i, account in enumerate(accounts):
             logger.info(f"抓取进度: {i+1}/{len(accounts)} - {account}")
             
-            success, duration = self.fetch_account(account, with_replies)
+            success, duration = self.fetch_account(account)
             total_duration += duration
+            
+            # 记录到学习数据库
+            self._record_fetch_to_db(account, success)
             
             if success:
                 success_count += 1
             else:
                 error_count += 1
             
-            # 随机间隔
+            # 随机间隔（interval 单位是分钟，转换为秒）
             if i < len(accounts) - 1:
-                delay = random.randint(interval // 2, interval * 2)
-                logger.debug(f"等待 {delay} 秒后继续")
-                time.sleep(delay)
+                delay_seconds = random.randint(interval * 30, interval * 120)  # 0.5x 到 2x 分钟，转换为秒
+                logger.debug(f"等待 {delay_seconds} 秒后继续")
+                time.sleep(delay_seconds)
         
         # 记录日志
         self._log_fetch(
@@ -400,7 +450,7 @@ class SmartScheduler:
         logger.debug(f"选中账号: {selected}")
         return selected
     
-    def run_scheduled(self, with_replies: bool = False):
+    def run_scheduled(self):
         """运行定时模式"""
         logger.info("=== 开始定时模式抓取 ===")
         
@@ -422,7 +472,7 @@ class SmartScheduler:
         for i, account in enumerate(accounts):
             logger.info(f"抓取进度: {i+1}/{len(accounts)} - {account}")
             
-            success, duration = self.fetch_account(account, with_replies)
+            success, duration = self.fetch_account(account)
             total_duration += duration
             
             if success:
@@ -430,12 +480,12 @@ class SmartScheduler:
             else:
                 error_count += 1
             
-            # 随机间隔
+            # 随机间隔（interval 单位是分钟，转换为秒）
             if i < len(accounts) - 1:
                 interval = self.config.get('scheduler', {}).get('default_interval_minutes', 60)
-                delay = random.randint(interval // 2, interval * 2)
-                logger.debug(f"等待 {delay} 秒后继续")
-                time.sleep(delay)
+                delay_seconds = random.randint(interval * 30, interval * 120)  # 0.5x 到 2x 分钟，转换为秒
+                logger.debug(f"等待 {delay_seconds} 秒后继续")
+                time.sleep(delay_seconds)
         
         # 记录日志
         self._log_fetch(
@@ -511,9 +561,7 @@ def main():
     parser.add_argument('--accounts', help='指定账号，逗号分隔')
     parser.add_argument('--show-profiles', action='store_true', help='显示账号画像')
     parser.add_argument('--update-profiles', action='store_true', help='更新账号画像')
-    parser.add_argument('--analyze', action='store_true', help='分析账号内容')
-    parser.add_argument('--compare', help='对比博主，逗号分隔')
-    parser.add_argument('--with-replies', action='store_true', help='包含评论区内容')
+    parser.add_argument('--with-replies', action='store_true', help='包含评论区内容（暂不支持）')
     parser.add_argument('--adaptive', action='store_true', help='自适应模式')
     
     args = parser.parse_args()
@@ -521,7 +569,7 @@ def main():
     # 记录启动日志
     logger.info("=" * 50)
     logger.info("Smart Scheduler 启动")
-    logger.info(f"参数: type={args.type}, adaptive={args.adaptive}, with_replies={args.with_replies}")
+    logger.info(f"参数: type={args.type}, adaptive={args.adaptive}")
     if args.accounts:
         logger.info(f"指定账号: {args.accounts}")
     logger.info("=" * 50)
@@ -536,13 +584,13 @@ def main():
         elif args.update_profiles:
             scheduler.update_profiles()
         elif args.adaptive:
-            scheduler.run_adaptive(args.with_replies)
+            scheduler.run_adaptive()
         elif args.type == 'adaptive':
-            scheduler.run_adaptive(args.with_replies)
+            scheduler.run_adaptive()
         elif args.type == 'scheduled':
-            scheduler.run_scheduled(args.with_replies)
+            scheduler.run_scheduled()
         else:
-            scheduler.run_scheduled(args.with_replies)
+            scheduler.run_scheduled()
         
         logger.info("Smart Scheduler 正常退出")
         

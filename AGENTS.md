@@ -126,6 +126,17 @@ python3 smart-scheduler.py --update-profiles
 | 2026-04-29 22:33 | 待创建：smart-scheduler.py | 进行中 |
 | 2026-04-29 22:34 | 待创建：scheduler-core.py | 待定 |
 | 2026-04-29 22:35 | 待创建：requirements.txt | 待定 |
+| 2026-04-30 10:15 | 修复 `--with-replies` bug：autocli 不支持此参数，改用 `--format json --limit 20` | 完成 |
+| 2026-04-30 10:15 | 修复 DB schema 不匹配：查询列名改为实际存在的 `fetch_count`, `probability` | 完成 |
+| 2026-04-30 10:15 | 添加 Bootstrap 模式：DB 数据 < 20 行时始终执行，积累学习数据 | 完成 |
+| 2026-04-30 10:15 | 添加 `_record_fetch_to_db` 方法：每次抓取后记录到 learning.db | 完成 |
+| 2026-04-30 10:17 | 验证修复：karpathy 抓取成功（7.13s），DB 学习记录正常 | 完成 |
+
+## 已知限制
+
+- **autocli 不支持 `--with-replies`**：`twitter search` 命令无此参数，`from:` 查询已包含用户所有推文
+- **需要 `/usr/bin/python3`（系统 Python 3.9）**：Homebrew Python 3.14 缺少 `yaml` 模块
+- **学习数据冷启动**：DB 数据量 < 20 行时使用 Bootstrap 模式，始终执行
 
 ---
 
