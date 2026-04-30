@@ -94,17 +94,44 @@ data/
 ├── config.yaml          # Configuration
 ├── accounts.json        # Account profiles
 ├── learning.db          # Learning database
-├── logs/                # Application logs
-│   ├── scheduler.log
-│   ├── error.log
-│   └── archive/
-├── fetch-logs/          # Fetch history
+├── logs/                # System logs
+│   ├── scheduler.log   # Main log (scheduling decisions, learning algorithms)
+│   ├── fetch.log       # Fetch log (detailed records of each fetch)
+│   ├── error.log       # Error log (exceptions and errors)
+│   └── archive/        # Archive directory (logs older than 7 days)
+├── fetch-logs/          # Fetch statistics (JSON format)
 │   └── YYYY-MM-DD.json
 └── content/             # Fetched content
-    └── x-收藏/
-        └── <handle>/
-            └── YYYY-MM-DD.md
+    └── x/               # Twitter/X platform
+        └── YYYY-MM-DD/  # By date
+            ├── summary.md
+            └── <handle>.md
 ```
+
+### Log Types
+
+| Log Type | File | Content | Purpose |
+|----------|------|---------|---------|
+| System Log | `logs/scheduler.log` | Scheduling decisions, learning algorithms, account selection | Debug system logic |
+| Fetch Log | `logs/fetch.log` | Detailed results of each fetch | Monitor fetch status |
+| Error Log | `logs/error.log` | Exceptions and errors | Troubleshoot issues |
+| Fetch Stats | `fetch-logs/*.json` | Daily fetch summary | Statistical analysis |
+
+### Log Cleanup
+
+```bash
+# Preview cleanup (dry run)
+python3 cleanup-logs.py --dry-run
+
+# Execute cleanup
+python3 cleanup-logs.py
+```
+
+Cleanup rules:
+- Within 3 days: Keep original logs
+- 3-7 days: Compress to `.gz`
+- 7-30 days: Move to `archive/` directory
+- Over 30 days: Delete
 
 ## Configuration
 

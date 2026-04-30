@@ -275,6 +275,27 @@ P(有新内容|时段) = (旧概率 × 旧次数 + 新证据) / (旧次数 + 1)
 
 ## 日志管理
 
+### 日志文件位置
+
+所有日志文件存储在 `data_dir/logs/` 目录下：
+
+```
+data_dir/logs/
+├── scheduler.log   # 主日志（调度决策、学习算法、账号选择）
+├── fetch.log       # 抓取日志（每次抓取的详细记录）
+├── error.log       # 错误日志（异常和错误）
+└── archive/        # 归档目录（7天以上的日志）
+```
+
+### 日志类型
+
+| 日志类型 | 文件 | 内容 | 用途 |
+|---------|------|------|------|
+| 系统运行日志 | `scheduler.log` | 调度决策、学习算法、账号选择 | 调试系统逻辑 |
+| 抓取日志 | `fetch.log` | 每次抓取的详细结果 | 监控抓取状态 |
+| 错误日志 | `error.log` | 异常和错误信息 | 排查问题 |
+| 抓取统计 | `fetch-logs/*.json` | 每日抓取汇总 | 统计分析 |
+
 ### 日志级别
 
 - `DEBUG`: 调试信息
@@ -286,8 +307,35 @@ P(有新内容|时段) = (旧概率 × 旧次数 + 新证据) / (旧次数 + 1)
 ### 日志格式
 
 ```
-%(asctime)s - %(name)s - %(levelname)s - %(message)s
+YYYY-MM-DD HH:mm:ss.SSS | LEVEL | module:function:line | message
 ```
+
+### 日志清理策略
+
+使用 `cleanup-logs.py` 脚本自动清理旧日志：
+
+```bash
+# 查看日志统计（预览模式）
+python3 cleanup-logs.py --dry-run
+
+# 执行清理
+python3 cleanup-logs.py
+```
+
+清理规则：
+- 3天内：保留原始日志
+- 3-7天：压缩为 `.gz`
+- 7-30天：移到 `archive/` 目录
+- 30天以上：删除
+
+### 日志配置
+
+日志系统基于 [loguru](https://github.com/Delgan/loguru) 实现，支持：
+- 按天轮转
+- 自动压缩
+- 分层保留
+- 结构化格式
+- 线程安全
 
 ## 扩展性
 

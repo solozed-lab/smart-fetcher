@@ -94,17 +94,44 @@ data/
 ├── config.yaml          # 配置文件
 ├── accounts.json        # 账号画像
 ├── learning.db          # 学习数据库
-├── logs/                # 应用日志
-│   ├── scheduler.log
-│   ├── error.log
-│   └── archive/
-├── fetch-logs/          # 抓取历史
+├── logs/                # 系统运行日志
+│   ├── scheduler.log   # 主日志（调度决策、学习算法）
+│   ├── fetch.log       # 抓取日志（每次抓取的详细记录）
+│   ├── error.log       # 错误日志（异常和错误）
+│   └── archive/        # 归档目录（7天以上的日志）
+├── fetch-logs/          # 抓取统计（JSON格式）
 │   └── YYYY-MM-DD.json
 └── content/             # 抓取内容
-    └── x-收藏/
-        └── <handle>/
-            └── YYYY-MM-DD.md
+    └── x/               # Twitter/X 平台
+        └── YYYY-MM-DD/  # 按日期分目录
+            ├── summary.md
+            └── <handle>.md
 ```
+
+### 日志说明
+
+| 日志类型 | 文件 | 内容 | 用途 |
+|---------|------|------|------|
+| 系统运行日志 | `logs/scheduler.log` | 调度决策、学习算法、账号选择 | 调试系统逻辑 |
+| 抓取日志 | `logs/fetch.log` | 每次抓取的详细结果 | 监控抓取状态 |
+| 错误日志 | `logs/error.log` | 异常和错误信息 | 排查问题 |
+| 抓取统计 | `fetch-logs/*.json` | 每日抓取汇总 | 统计分析 |
+
+### 日志清理策略
+
+```bash
+# 查看日志统计（预览模式）
+python3 cleanup-logs.py --dry-run
+
+# 执行清理
+python3 cleanup-logs.py
+```
+
+清理规则：
+- 3天内：保留原始日志
+- 3-7天：压缩为 `.gz`
+- 7-30天：移到 `archive/` 目录
+- 30天以上：删除
 
 ## 配置说明
 
